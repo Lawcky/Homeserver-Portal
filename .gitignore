@@ -24,3 +24,6 @@ Dockerfile.cross
 *.swo
 *~
 
+files/*
+certs/*
+.env
