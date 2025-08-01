@@ -1,0 +1,9 @@
+services:
+  go-server:
+    image: mcr.microsoft.com/devcontainers/go:latest
+    ports:
+      - "8080:80"
+      - "8443:443"
+    command: sleep infinity
+    volumes:
+      - ../:/workspaces/go-homerserver-portal

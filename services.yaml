@@ -1,0 +1,9 @@
+# services.yaml
+- path: /jellyfin/
+  target: https://google.com
+- path: /site/
+  target: https://localhost:8080
+- path: /joplin/
+  target: https://localhost:8443
+- path: /files/
+  target: http://localhost:8000/

@@ -1,0 +1,15 @@
+{
+  "name": "go-homeserver-portal-dev",
+  "dockerComposeFile": "docker-compose.yaml",
+  "service": "go-server",
+  "workspaceFolder": "/workspaces/go-homerserver-portal",
+  "customizations": {
+    // "vscode": {
+    //   "extensions": [
+    //     "golang.go",
+    //     "golangci.golangci-lint",
+    //     "ms-vscode.go"
+    //   ]
+    // }
+  }
+}
