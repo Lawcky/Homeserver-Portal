@@ -27,3 +27,4 @@ Dockerfile.cross
 files/*
 certs/*
 .env
+depvod-example-go

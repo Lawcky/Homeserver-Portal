@@ -2,7 +2,7 @@
 package main
 
 import (
-	"crypto/tls"
+	// "crypto/tls"
 	"fmt"
 	"html/template"
 	"log"
@@ -15,7 +15,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
-	"golang.org/x/crypto/acme/autocert"
+	// "golang.org/x/crypto/acme/autocert"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v3"
 )
@@ -58,6 +58,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	user := r.FormValue("username")
 	pass := r.FormValue("password")
 
+	fmt.Println("Login attempt:", user, pass)
 	if validateCredentials(user, pass) {
 		sess, _ := store.Get(r, "session")
 		sess.Values["authenticated"] = true
@@ -88,7 +89,7 @@ func authMiddleware(next http.Handler) http.Handler {
 
 func validateCredentials(user, password string) bool {
 	const hardcodedUser = "admin"
-	const hardcodedHash = "$2a$10$L3Bv6s6y7xQ2v8SrpPv2mObhrLk1cz3/EaM3mZSEqolH5TSxyCLQW" // 'password'
+	const hardcodedHash = "$2a$12$zl814bt85KTGqmb0s/f9Lu4wlrjwcLv/eppixTxIx./4HEdM.t/LW" // 'password'
 	if user != hardcodedUser {
 		return false
 	}
@@ -129,24 +130,28 @@ func main() {
 		r.PathPrefix(route.Path).Handler(authMiddleware(http.StripPrefix(route.Path, proxy)))
 	}
 
-	certManager := autocert.Manager{
-		Prompt:     autocert.AcceptTOS,
-		HostPolicy: autocert.HostWhitelist("kandia.ru"),
-		Cache:      autocert.DirCache(".certs"),
-	}
-
 	httpsServer := &http.Server{
-		Addr: ":443",
-		Handler: r,
-		TLSConfig: &tls.Config{
-			GetCertificate: certManager.GetCertificate,
-		},
-	}
+    Addr:    ":443",
+    Handler: r,
+}
 
-	go http.ListenAndServe(":80", certManager.HTTPHandler(nil))
+	go func() {
+		log.Println("Redirecting HTTP to HTTPS")
+		http.ListenAndServe(":80", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, "https://"+r.Host+r.RequestURI, http.StatusMovedPermanently)
+		}))
+	}()
 
-	fmt.Println("Serving on https://kandia.ru")
-	err = httpsServer.ListenAndServeTLS("", "")
+	// // temporary fix : (allows service /files to webroot)
+	// r.PathPrefix("/").Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	// 	path := strings.TrimPrefix(r.URL.Path, "/")
+	// 	fullPath := filepath.Join("files", path)
+	// 	http.ServeFile(w, r, fullPath)
+	// }))
+
+	log.Println("Serving HTTPS on port 443")
+	err = httpsServer.ListenAndServeTLS(".certs/fullchain.pem", ".certs/privkey.pem")
+
 	if err != nil {
 		log.Fatal(err)
 	}
