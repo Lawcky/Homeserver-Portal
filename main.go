@@ -21,11 +21,14 @@ var (
 	store       = sessions.NewCookieStore([]byte("super-secret-key"))
 
 	serviceConf []ServiceRoute
+	serviceUsers []UserAccount
 )
 
 type ServiceRoute struct {
 	Path   string `yaml:"path"`
 	Target string `yaml:"target"`
+	Need_Auth bool `yaml:"need_auth"`
+	Is_admin bool `yaml:"is_admin"`
 }
 
 func loadRoutes(path string) error {
@@ -35,6 +38,21 @@ func loadRoutes(path string) error {
 	}
 	defer file.Close()
 	return yaml.NewDecoder(file).Decode(&serviceConf)
+}
+
+type UserAccount struct {
+	Username string `yaml:"username"`
+	BcryptHashedPassword string `yaml:"bcrypthashedpassword"`
+	Is_admin bool `yaml:"is_admin"`
+}
+
+func loadUsers(path string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	return yaml.NewDecoder(file).Decode(&serviceUsers)
 }
 
 func makeReverseProxy(target string) http.Handler {
@@ -58,7 +76,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
     username := r.Form.Get("username")
     password := r.Form.Get("password")
 
-	fmt.Println("Login attempt: ", username)
+	fmt.Println("Login attempt: ", validateCredentials(username, password))
     if validateCredentials(username, password) {
         session, _ := store.Get(r, "session")
         session.Values["user"] = username
@@ -77,60 +95,11 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
     http.Redirect(w, r, "/login", http.StatusFound)
 }
 
-// need rework
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	sess, _ := store.Get(r, "session")
 	sess.Values["authenticated"] = false
 	sess.Save(r, w)
 	http.Redirect(w, r, "/login", http.StatusFound)
-}
-
-func authMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		sess, _ := store.Get(r, "session")
-		if auth, ok := sess.Values["authenticated"].(bool); !ok || !auth {
-			http.Redirect(w, r, "/login", http.StatusFound)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-// need to change user management later
-func validateCredentials(user, password string) bool {
-	const hardcodedUser = "admin"
-	const hardcodedHash = "$2a$12$zl814bt85KTGqmb0s/f9Lu4wlrjwcLv/eppixTxIx./4HEdM.t/LW" // 'password'
-	if user != hardcodedUser {
-		return false
-	}
-	return bcrypt.CompareHashAndPassword([]byte(hardcodedHash), []byte(password)) == nil
-}
-
-func getCurrentUser(r *http.Request) (string) {
-    session, err := store.Get(r, "session")
-    if err != nil {
-        return ""
-    }
-
-    if userVal, ok := session.Values["user"].(string); ok {
-		return userVal
-	}
-	
-	return ""
-}
-
-func isAuthenticated(r *http.Request) (bool) {
-    session, err := store.Get(r, "session")
-    if err != nil {
-        return false
-    }
-
-    if authVal, ok := session.Values["authenticated"].(bool); ok {
-		fmt.Println(authVal)
-		return authVal
-	}
-	
-	return false
 }
 
 func fileHandler(w http.ResponseWriter, r *http.Request) {
@@ -195,12 +164,77 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
     })
 }
 
+func authMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sess, _ := store.Get(r, "session")
+		if auth, ok := sess.Values["authenticated"].(bool); !ok || !auth {
+			dest := url.QueryEscape(r.URL.RequestURI())
+			http.Redirect(w, r, "/login?next="+dest, http.StatusFound)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func validateCredentials(user, password string) bool {
+	
+	for _, u := range serviceUsers {
+		if u.Username == user {			
+			return bcrypt.CompareHashAndPassword([]byte(u.BcryptHashedPassword), []byte(password)) == nil
+		}
+	} 	
+	return false
+}
+
+func getUserProperty(r *http.Request, property string) (string) {
+    session, err := store.Get(r, "session")
+    if err != nil {
+        return ""
+    }
+
+	switch property {
+	case "Username":
+    	if userVal, ok := session.Values["user"].(string); ok {
+			return userVal
+		}
+	case "Is_admin":
+		if isAdminVal, ok := session.Values["is_admin"].(bool); ok {
+			if isAdminVal {
+				return "true"
+			} 
+		} 
+	} 
+	
+	return ""
+}
+
+func isAuthenticated(r *http.Request) (bool) {
+    session, err := store.Get(r, "session")
+    if err != nil {
+        return false
+    }
+
+    if authVal, ok := session.Values["authenticated"].(bool); ok {
+		fmt.Println(authVal)
+		return authVal
+	}
+	
+	return false
+}
+
+
+
 
 
 func main() {
 	err := loadRoutes("services.yaml")
 	if err != nil {
 		log.Fatalf("Failed to load service config: %v", err)
+	}
+
+	err = loadUsers("users.yaml")
+	if err != nil {
+		log.Fatalf("Failed to load user accounts: %v", err)
 	}
 
 	r := mux.NewRouter()
@@ -210,15 +244,30 @@ func main() {
 	r.PathPrefix("/files").Handler(http.StripPrefix("/files", http.HandlerFunc(fileHandler)))
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
+	// when going to root (/) load a template for the portal main page, with something to show available services if logged in, and hide the logged in ones, have a user part where you can login
+
+	// add a way to choose if certain services requires authentication or not (like /site)
+
+	// 
+
+	// Register the routes from service.yaml
 	for _, route := range serviceConf {
 		proxy := makeReverseProxy(route.Target)
-		r.PathPrefix(route.Path).Handler(authMiddleware(http.StripPrefix(route.Path, proxy)))
+		if route.Need_Auth {
+			r.PathPrefix(route.Path).Handler(authMiddleware(http.StripPrefix(route.Path, proxy)))
+
+			// When the user's manager will be done add a check for is_admin here
+
+		} else {
+			r.PathPrefix(route.Path).Handler(http.StripPrefix(route.Path, proxy))
+		}
+		log.Printf("Registered route: %s -> %s (Need Auth: %t, Is Admin: %t)", route.Path, route.Target, route.Need_Auth, route.Is_admin)
 	}
 
 	httpsServer := &http.Server{
-    Addr:    ":443",
-    Handler: r,
-}
+		Addr:    ":443",
+		Handler: r,
+	}
 
 	go func() {
 		log.Println("Redirecting HTTP to HTTPS")

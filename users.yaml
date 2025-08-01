@@ -1,0 +1,10 @@
+# services.yaml
+- username: admin
+  bcrypthashedpassword: $2a$12$zl814bt85KTGqmb0s/f9Lu4wlrjwcLv/eppixTxIx./4HEdM.t/LW
+  is_admin: True
+- username: user
+  bcrypthashedpassword: $2a$12$zl814bt85KTGqmb0s/f9Lu4wlrjwcLv/eppixTxIx./4HEdM.t/LW
+  is_admin: False
+- username: lawcky
+  bcrypthashedpassword: $2a$12$zl814bt85KTGqmb0s/f9Lu4wlrjwcLv/eppixTxIx./4HEdM.t/LW
+  is_admin: True  

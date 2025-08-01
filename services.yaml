@@ -1,7 +1,13 @@
 # services.yaml
-- path: /jellyfin/
-  target: http://google.com
-- path: /site/
+- path: /jellyfin
+  target: http://placeholder.com
+  need_auth: true
+  is_admin: false
+- path: /site
   target: http://localhost:8080
-- path: /joplin/
+  need_auth: false
+  is_admin: false
+- path: /joplin
   target: http://127.0.0.1:12951
+  need_auth: true
+  is_admin: false
