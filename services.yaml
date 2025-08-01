@@ -1,7 +1,7 @@
 # services.yaml
 - path: /jellyfin/
-  target: https://google.com
+  target: http://google.com
 - path: /site/
-  target: https://localhost:8080
+  target: http://localhost:8080
 - path: /joplin/
   target: http://127.0.0.1:12951
