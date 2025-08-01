@@ -1,0 +1,8 @@
+{{ define "content" }}
+<h1>Directory Listing: {{ .Path }}</h1>
+<ul>
+{{ range .Files }}
+    <li><a href="https://dev.lawcky.net/files/{{ .URL }}">{{ .Name }}</a></li>
+{{ end }}
+</ul>
+{{ end }}

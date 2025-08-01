@@ -2,7 +2,6 @@
 package main
 
 import (
-	// "crypto/tls"
 	"fmt"
 	"html/template"
 	"log"
@@ -12,16 +11,15 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
-	// "golang.org/x/crypto/acme/autocert"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v3"
 )
 
 var (
 	store       = sessions.NewCookieStore([]byte("super-secret-key"))
+
 	serviceConf []ServiceRoute
 )
 
@@ -48,27 +46,38 @@ func makeReverseProxy(target string) http.Handler {
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
-		tmpl := template.Must(template.ParseFiles("templates/login.html"))
-		tmpl.Execute(w, nil)
-		return
-	}
+    if r.Method == "GET" {
+        next := r.URL.Query().Get("next")
+        tmpl := template.Must(template.ParseFiles("templates/layout.html","templates/login.html"))
+        tmpl.Execute(w, map[string]string{"Next": next})
+        return
+    }
 
-	r.ParseForm()
-	user := r.FormValue("username")
-	pass := r.FormValue("password")
+    // POST
+    r.ParseForm()
+    username := r.Form.Get("username")
+    password := r.Form.Get("password")
 
-	fmt.Println("Login attempt:", user, pass)
-	if validateCredentials(user, pass) {
-		sess, _ := store.Get(r, "session")
-		sess.Values["authenticated"] = true
-		sess.Save(r, w)
-		http.Redirect(w, r, "/", http.StatusFound)
-	} else {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-	}
+	fmt.Println("Login attempt: ", username)
+    if validateCredentials(username, password) {
+        session, _ := store.Get(r, "session")
+        session.Values["user"] = username
+		session.Values["authenticated"] = true
+        session.Save(r, w)
+
+        next := r.Form.Get("next")
+        if next != "" {
+            http.Redirect(w, r, next, http.StatusFound)
+        } else {
+            http.Redirect(w, r, "/", http.StatusFound)
+        }
+        return
+    }
+
+    http.Redirect(w, r, "/login", http.StatusFound)
 }
 
+// need rework
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	sess, _ := store.Get(r, "session")
 	sess.Values["authenticated"] = false
@@ -87,6 +96,7 @@ func authMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+// need to change user management later
 func validateCredentials(user, password string) bool {
 	const hardcodedUser = "admin"
 	const hardcodedHash = "$2a$12$zl814bt85KTGqmb0s/f9Lu4wlrjwcLv/eppixTxIx./4HEdM.t/LW" // 'password'
@@ -96,21 +106,96 @@ func validateCredentials(user, password string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(hardcodedHash), []byte(password)) == nil
 }
 
-func fileHandler(w http.ResponseWriter, r *http.Request) {
-	path := strings.TrimPrefix(r.URL.Path, "/files")
-	fullPath := filepath.Join("files", path)
+func getCurrentUser(r *http.Request) (string) {
+    session, err := store.Get(r, "session")
+    if err != nil {
+        return ""
+    }
 
-	// if in /files/keys or subdirectories, require auth
-	if strings.HasPrefix(path, "/keys") {
-		sess, _ := store.Get(r, "session")
-		if auth, ok := sess.Values["authenticated"].(bool); !ok || !auth {
-			http.Redirect(w, r, "/login", http.StatusFound)
-			return
-		}
+    if userVal, ok := session.Values["user"].(string); ok {
+		return userVal
 	}
-
-	http.ServeFile(w, r, fullPath)
+	
+	return ""
 }
+
+func isAuthenticated(r *http.Request) (bool) {
+    session, err := store.Get(r, "session")
+    if err != nil {
+        return false
+    }
+
+    if authVal, ok := session.Values["authenticated"].(bool); ok {
+		fmt.Println(authVal)
+		return authVal
+	}
+	
+	return false
+}
+
+func fileHandler(w http.ResponseWriter, r *http.Request) {
+    authStatus := isAuthenticated(r)
+    path := r.URL.Path
+	fmt.Println(path, url.QueryEscape(path))
+    if strings.HasPrefix(path, "/keys") && !authStatus {
+        http.Redirect(w, r, "/login?next=files/"+url.QueryEscape(path), http.StatusFound)
+        return
+    }
+
+    basePath := strings.TrimPrefix(path, "/files")
+    fullPath := filepath.Join("files", basePath)
+
+    info, err := os.Stat(fullPath)
+    if err != nil {
+        http.NotFound(w, r)
+        return
+    }
+
+    if !info.IsDir() {
+        // Serve the file content
+		safePath := filepath.Clean(basePath)
+		fullPath := filepath.Join("files", safePath)
+
+		if strings.HasPrefix(path, "/keys") && !authStatus {
+			http.Redirect(w, r, "/login?next=files/"+url.QueryEscape(path), http.StatusFound)
+			return
+		} else {
+			http.ServeFile(w, r, fullPath)
+		}
+        return
+    }
+
+    // Directory: List contents
+    entries, err := os.ReadDir(fullPath)
+    if err != nil {
+        http.Error(w, "Failed to read directory", http.StatusInternalServerError)
+        return
+    }
+
+    files := []struct {
+        Name string
+        URL  string
+    }{}
+
+    for _, entry := range entries {
+        files = append(files, struct {
+            Name string
+            URL  string
+        }{
+            Name: entry.Name(),
+            URL:  path + "/" + entry.Name(),
+        })
+    }
+
+    tmpl := template.Must(template.ParseFiles("templates/layout.html", "templates/files.html"))
+    tmpl.Execute(w, map[string]interface{}{
+        "Title": "Files",
+        "Path":  path,
+        "Files": files,
+    })
+}
+
+
 
 func main() {
 	err := loadRoutes("services.yaml")
@@ -122,8 +207,8 @@ func main() {
 
 	r.HandleFunc("/login", loginHandler).Methods("GET", "POST")
 	r.HandleFunc("/logout", logoutHandler).Methods("GET")
-
-	r.PathPrefix("/files/").Handler(http.StripPrefix("/files", http.HandlerFunc(fileHandler)))
+	r.PathPrefix("/files").Handler(http.StripPrefix("/files", http.HandlerFunc(fileHandler)))
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	for _, route := range serviceConf {
 		proxy := makeReverseProxy(route.Target)

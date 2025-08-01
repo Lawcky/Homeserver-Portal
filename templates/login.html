@@ -1,13 +1,9 @@
-<!-- templates/login.html -->
-<!DOCTYPE html>
-<html>
-<head><title>Login</title></head>
-<body>
+{{ define "content" }}
   <h2>Login</h2>
   <form method="POST" action="/login">
     <label>Username: <input name="username" type="text" /></label><br>
     <label>Password: <input name="password" type="password" /></label><br>
+    <input type="hidden" name="next" value="{{.Next}}">
     <button type="submit">Login</button>
   </form>
-</body>
-</html>
+{{ end }}
