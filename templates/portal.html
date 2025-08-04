@@ -1,0 +1,89 @@
+{{ define "content" }}
+
+
+<div class="portal-fronttext">
+    <h2>Welcome to the Portal</h2>
+
+    <p>Hello {{ .Username }}!</p>
+    {{ if .Is_admin }}
+        <p>You have <span class="admin-privileges">administrative privileges</span>.</p>
+    {{ else if .Username}}
+        <p>You are a regular user.</p>
+    {{ else }}
+        <p>You are not connected.</p>
+    {{ end }}
+    <p>Here are the currently available services.<br> Some of them may need you to authenticate.</p>
+    
+</div>
+
+<section class="services-list" id="normal-services">
+{{ range .Services }}
+
+{{ if .Is_admin }}
+    {{ continue }}
+{{ end }}
+<a href="{{ .Path }}" class="service-item">
+    <article>
+        {{ if .Icon }}
+            <img src="{{ .Icon }}" alt="{{ .DisplayName }} icon" class="service-icon">
+        {{ else }}
+            <img src="/static/default-icon.png" alt="Default icon (by blackrabbit974)" class="service-icon">
+        {{ end }}
+        <h3>{{ .DisplayName }}</h2>
+        <p>{{ .Description }}</p>
+
+        {{ if .Need_Auth }}
+            <span class="service-note">Need authentication</span>
+        {{ else }}
+            <span class="service-note">_</span>
+        {{ end }}
+    </article>
+</a>
+{{ end }}
+</section>
+
+{{ if .Message }}
+<section class="text-section" id="portal-message">
+    <h2>Services Information</h2>
+    <p>{{ .Message }}</p>
+</section>
+{{ end }}
+
+
+{{ if .Is_admin}}
+<section class="text-section" id="portal-message-admin"><p>Admin Only:</p></section>
+
+<section class="services-list" id="admin-services">
+{{ range .Services }}
+
+{{ if .Is_admin }}
+<a href="{{ .Path }}" class="service-item">
+    <article>
+        {{ if .Icon }}
+            <img src="{{ .Icon }}" alt="{{ .DisplayName }} icon" class="service-icon">
+        {{ else }}
+            <img src="/static/default-icon.png" alt="Default icon (by blackrabbit974)" class="service-icon">
+        {{ end }}
+        <h3>{{ .DisplayName }}</h2>
+        <p>{{ .Description }}</p>
+
+            <span class="service-note">Need authentication</span>
+    </article>
+</a>
+{{ end }} <!-- if the service is admin -->
+{{ end }} <!-- the end of the range -->
+</section>
+{{ else }} <!-- the user is not admin / connected -->
+    <style>
+        #portal-message-admin {
+            opacity: 0.8; /*opacity of text section*/
+        }
+    </style>
+    <section class="text-section" id="portal-message-admin">
+    <p>You are not an admin, you cannot see the admin services.</p>
+
+{{ end }} <!--if the user is admin -->
+
+
+
+{{ end}}

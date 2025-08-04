@@ -27,6 +27,9 @@ var (
 type ServiceRoute struct {
 	Path   string `yaml:"path"`
 	Target string `yaml:"target"`
+	DisplayName string `yaml:"display_name"`
+	Description string `yaml:"description"`
+	Icon string `yaml:"icon"`
 	Need_Auth bool `yaml:"need_auth"`
 	Is_admin bool `yaml:"is_admin"`
 }
@@ -76,11 +79,12 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
     username := r.Form.Get("username")
     password := r.Form.Get("password")
 
-	fmt.Println("Login attempt: ", validateCredentials(username, password))
-    if validateCredentials(username, password) {
+	is_ok, is_admin := validateCredentials(username, password)
+    if  is_ok{
         session, _ := store.Get(r, "session")
         session.Values["user"] = username
 		session.Values["authenticated"] = true
+		session.Values["is_admin"] = is_admin
         session.Save(r, w)
 
         next := r.Form.Get("next")
@@ -102,10 +106,42 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusFound)
 }
 
+func portalHandler(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles("templates/layout.html", "templates/portal.html"))
+
+	// if a message is present add it to the Message field
+	// message is equal to whatever is in the portal-message.txt file
+	messageFile := "templates/portal-message.txt"
+	messageContent, err := os.ReadFile(messageFile)
+	if err != nil {
+		log.Printf("Error reading message file: %v", err)
+	} 
+
+	if !isAuthenticated(r) {
+		tmpl.Execute(w, map[string]interface{}{
+			"Title": "Portal",
+			"isAdmin": false,
+			"Username": "",
+			"Services": serviceConf,
+			"Message": string(messageContent),
+		})
+	} else {
+		username := getUserProperty(r, "Username")
+		is_admin := getUserProperty(r, "is_admin")
+
+		tmpl.Execute(w, map[string]interface{}{
+			"Title": "Portal",
+			"Is_admin": is_admin,
+			"Username": username,
+			"Services": serviceConf,
+			"Message": string(messageContent),
+		})
+	}
+}
+
 func fileHandler(w http.ResponseWriter, r *http.Request) {
     authStatus := isAuthenticated(r)
     path := r.URL.Path
-	fmt.Println(path, url.QueryEscape(path))
     if strings.HasPrefix(path, "/keys") && !authStatus {
         http.Redirect(w, r, "/login?next=files/"+url.QueryEscape(path), http.StatusFound)
         return
@@ -141,6 +177,8 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+	username := getUserProperty(r, "Username")
+
     files := []struct {
         Name string
         URL  string
@@ -159,31 +197,40 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
     tmpl := template.Must(template.ParseFiles("templates/layout.html", "templates/files.html"))
     tmpl.Execute(w, map[string]interface{}{
         "Title": "Files",
+		"Username": username,
         "Path":  path,
         "Files": files,
     })
 }
 
-func authMiddleware(next http.Handler) http.Handler {
+func authMiddleware(next http.Handler, user_admin bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		sess, _ := store.Get(r, "session")
-		if auth, ok := sess.Values["authenticated"].(bool); !ok || !auth {
+		if auth := isAuthenticated(r); !auth {
 			dest := url.QueryEscape(r.URL.RequestURI())
 			http.Redirect(w, r, "/login?next="+dest, http.StatusFound)
 			return
+		}
+		if user_admin {
+			is_admin := getUserProperty(r, "is_admin")
+			if is_admin != "true" {
+				http.Error(w, "You need an admin account to access this page.", http.StatusForbidden)
+				return
+			}
 		}
 		next.ServeHTTP(w, r)
 	})
 }
 
-func validateCredentials(user, password string) bool {
+func validateCredentials(user, password string) (bool, bool) {
 	
 	for _, u := range serviceUsers {
 		if u.Username == user {			
-			return bcrypt.CompareHashAndPassword([]byte(u.BcryptHashedPassword), []byte(password)) == nil
+			password_check := bcrypt.CompareHashAndPassword([]byte(u.BcryptHashedPassword), []byte(password)) == nil 
+			is_admin := u.Is_admin
+			return password_check, is_admin
 		}
-	} 	
-	return false
+	}
+	return false, false
 }
 
 func getUserProperty(r *http.Request, property string) (string) {
@@ -192,19 +239,24 @@ func getUserProperty(r *http.Request, property string) (string) {
         return ""
     }
 
+	is_connected := isAuthenticated(r)
+	if (!is_connected) {
+		return ""
+	}
+
 	switch property {
 	case "Username":
     	if userVal, ok := session.Values["user"].(string); ok {
 			return userVal
 		}
-	case "Is_admin":
+	case "is_admin":
 		if isAdminVal, ok := session.Values["is_admin"].(bool); ok {
 			if isAdminVal {
 				return "true"
 			} 
 		} 
 	} 
-	
+
 	return ""
 }
 
@@ -215,7 +267,6 @@ func isAuthenticated(r *http.Request) (bool) {
     }
 
     if authVal, ok := session.Values["authenticated"].(bool); ok {
-		fmt.Println(authVal)
 		return authVal
 	}
 	
@@ -227,6 +278,7 @@ func isAuthenticated(r *http.Request) (bool) {
 
 
 func main() {
+	fmt.Println("Starting the portal")
 	err := loadRoutes("services.yaml")
 	if err != nil {
 		log.Fatalf("Failed to load service config: %v", err)
@@ -239,29 +291,28 @@ func main() {
 
 	r := mux.NewRouter()
 
+	r.HandleFunc("/", portalHandler).Methods("GET")
 	r.HandleFunc("/login", loginHandler).Methods("GET", "POST")
 	r.HandleFunc("/logout", logoutHandler).Methods("GET")
 	r.PathPrefix("/files").Handler(http.StripPrefix("/files", http.HandlerFunc(fileHandler)))
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
-	// when going to root (/) load a template for the portal main page, with something to show available services if logged in, and hide the logged in ones, have a user part where you can login
-
-	// add a way to choose if certain services requires authentication or not (like /site)
-
-	// 
-
 	// Register the routes from service.yaml
 	for _, route := range serviceConf {
 		proxy := makeReverseProxy(route.Target)
-		if route.Need_Auth {
-			r.PathPrefix(route.Path).Handler(authMiddleware(http.StripPrefix(route.Path, proxy)))
+		if route.Need_Auth || route.Is_admin {
 
+			if route.Is_admin {
+				r.PathPrefix(route.Path).Handler(authMiddleware(http.StripPrefix(route.Path, proxy), true)) // this will check if the user is authenticated AND if he is admin
+			} else {
+				r.PathPrefix(route.Path).Handler(authMiddleware(http.StripPrefix(route.Path, proxy), false)) // this will check if the user is authenticated but not if he is admin
+				}
 			// When the user's manager will be done add a check for is_admin here
 
 		} else {
 			r.PathPrefix(route.Path).Handler(http.StripPrefix(route.Path, proxy))
 		}
-		log.Printf("Registered route: %s -> %s (Need Auth: %t, Is Admin: %t)", route.Path, route.Target, route.Need_Auth, route.Is_admin)
+		log.Printf("Registered route: %s -> %s (Need Auth: %t, Is Admin Only: %t)", route.Path, route.Target, route.Need_Auth, route.Is_admin)
 	}
 
 	httpsServer := &http.Server{

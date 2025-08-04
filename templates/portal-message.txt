@@ -1,0 +1,1 @@
+Homeserver-Portal still in developpement, services access may not be available yet
