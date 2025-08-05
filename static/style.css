@@ -268,6 +268,13 @@ input[type="Submit"]:hover{
   text-decoration: underline;
 }
 
+.error-message {
+    color: red;
+    text-align: center;
+    margin-top: 10px;
+}
+
+
 /* no account page */
 
 .image-container-noaccount {

@@ -27,7 +27,11 @@
   <input type="hidden" name="next" value="{{.Next}}">
 
   <input name="submit" type="Submit" value="Login">
-
+  {{ if .Message }}
+  <div class="error-message">
+    <p>{{.Message}}</p>
+  </div>
+  {{ end }}
   <div class="signup_link">
     <a href="/noaccount">Not a Member ?</a>
   </div>

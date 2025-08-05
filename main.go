@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
@@ -70,8 +71,17 @@ func makeReverseProxy(target string) http.Handler {
 func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		next := r.URL.Query().Get("next")
+		message := r.URL.Query().Get("message")
 		tmpl := template.Must(template.ParseFiles("templates/layout.html", "templates/login.html", "templates/footer.html"))
-		tmpl.Execute(w, map[string]string{"Next": next})
+		if message == "Invalid-credentials" {
+			tmpl.Execute(w, map[string]string{
+				"Next":    next,
+				"Message": "Invalid credentials, please try again.",
+			})
+		} else {
+			tmpl.Execute(w, map[string]string{"Next": next})
+		}
+
 		return
 	}
 
@@ -97,7 +107,10 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/login", http.StatusFound)
+	time.Sleep(3 * time.Second) // simulate a delay for failed login attempts
+	// invalid credentials
+	next := r.Form.Get("next")
+	http.Redirect(w, r, "/login?next="+url.QueryEscape(next)+"&message=Invalid-credentials", http.StatusFound)
 }
 
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
