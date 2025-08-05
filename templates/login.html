@@ -1,9 +1,38 @@
 {{ define "content" }}
-  <h2>Login</h2>
-  <form method="POST" action="/login">
-    <label>Username: <input name="username" type="text" /></label><br>
-    <label>Password: <input name="password" type="password" /></label><br>
-    <input type="hidden" name="next" value="{{.Next}}">
-    <button type="submit">Login</button>
-  </form>
-{{ end }}
+  
+<section class="portal-fronttext">
+  <h2>Welcome to the Portal</h2>
+  <p>Please log in to access your services.</p>
+  <p>Account cannot be created by anyone other than the <span class="admin-privileges">Administrator</span>.</p>
+</section>
+
+<!-- CSS is clean here... because its not mine : https://www.codewithfaraz.com/content/6/create-a-pure-css-simple-login-page-html-and-css#css-code -->
+<div class="login-container">
+  <section class="login-page">
+    <h2>Login</h2>
+    <form method="POST" action="/login">
+
+  <div class="txt_field">
+    <input type="text" name="username" required>
+    <span></span>
+    <label>Username</label>
+  </div>
+
+  <div class="txt_field">
+    <input type="password" name="password" required>
+    <span></span>
+    <label>Password</label>
+  </div>
+
+  <input type="hidden" name="next" value="{{.Next}}">
+
+  <input name="submit" type="Submit" value="Login">
+
+  <div class="signup_link">
+    <a href="/noaccount">Not a Member ?</a>
+  </div>
+
+  </section>
+</div>
+
+  {{ end }}

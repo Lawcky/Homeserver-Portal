@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 	"golang.org/x/crypto/bcrypt"
@@ -18,20 +19,20 @@ import (
 )
 
 var (
-	store       = sessions.NewCookieStore([]byte("super-secret-key"))
+	store = sessions.NewCookieStore([]byte("super-secret-key"))
 
-	serviceConf []ServiceRoute
+	serviceConf  []ServiceRoute
 	serviceUsers []UserAccount
 )
 
 type ServiceRoute struct {
-	Path   string `yaml:"path"`
-	Target string `yaml:"target"`
+	Path        string `yaml:"path"`
+	Target      string `yaml:"target"`
 	DisplayName string `yaml:"display_name"`
 	Description string `yaml:"description"`
-	Icon string `yaml:"icon"`
-	Need_Auth bool `yaml:"need_auth"`
-	Is_admin bool `yaml:"is_admin"`
+	Icon        string `yaml:"icon"`
+	Need_Auth   bool   `yaml:"need_auth"`
+	Is_admin    bool   `yaml:"is_admin"`
 }
 
 func loadRoutes(path string) error {
@@ -44,9 +45,9 @@ func loadRoutes(path string) error {
 }
 
 type UserAccount struct {
-	Username string `yaml:"username"`
+	Username             string `yaml:"username"`
 	BcryptHashedPassword string `yaml:"bcrypthashedpassword"`
-	Is_admin bool `yaml:"is_admin"`
+	Is_admin             bool   `yaml:"is_admin"`
 }
 
 func loadUsers(path string) error {
@@ -67,47 +68,47 @@ func makeReverseProxy(target string) http.Handler {
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
-    if r.Method == "GET" {
-        next := r.URL.Query().Get("next")
-        tmpl := template.Must(template.ParseFiles("templates/layout.html","templates/login.html"))
-        tmpl.Execute(w, map[string]string{"Next": next})
-        return
-    }
+	if r.Method == "GET" {
+		next := r.URL.Query().Get("next")
+		tmpl := template.Must(template.ParseFiles("templates/layout.html", "templates/login.html", "templates/footer.html"))
+		tmpl.Execute(w, map[string]string{"Next": next})
+		return
+	}
 
-    // POST
-    r.ParseForm()
-    username := r.Form.Get("username")
-    password := r.Form.Get("password")
+	// POST
+	r.ParseForm()
+	username := r.Form.Get("username")
+	password := r.Form.Get("password")
 
 	is_ok, is_admin := validateCredentials(username, password)
-    if  is_ok{
-        session, _ := store.Get(r, "session")
-        session.Values["user"] = username
+	if is_ok {
+		session, _ := store.Get(r, "session")
+		session.Values["user"] = username
 		session.Values["authenticated"] = true
 		session.Values["is_admin"] = is_admin
-        session.Save(r, w)
+		session.Save(r, w)
 
-        next := r.Form.Get("next")
-        if next != "" {
-            http.Redirect(w, r, next, http.StatusFound)
-        } else {
-            http.Redirect(w, r, "/", http.StatusFound)
-        }
-        return
-    }
+		next := r.Form.Get("next")
+		if next != "" {
+			http.Redirect(w, r, next, http.StatusFound)
+		} else {
+			http.Redirect(w, r, "/", http.StatusFound)
+		}
+		return
+	}
 
-    http.Redirect(w, r, "/login", http.StatusFound)
+	http.Redirect(w, r, "/login", http.StatusFound)
 }
 
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	sess, _ := store.Get(r, "session")
-	sess.Values["authenticated"] = false
+	sess.Options.MaxAge = -1 //deletes the cookie
 	sess.Save(r, w)
 	http.Redirect(w, r, "/login", http.StatusFound)
 }
 
 func portalHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl := template.Must(template.ParseFiles("templates/layout.html", "templates/portal.html"))
+	tmpl := template.Must(template.ParseFiles("templates/layout.html", "templates/portal.html", "templates/footer.html"))
 
 	// if a message is present add it to the Message field
 	// message is equal to whatever is in the portal-message.txt file
@@ -115,92 +116,134 @@ func portalHandler(w http.ResponseWriter, r *http.Request) {
 	messageContent, err := os.ReadFile(messageFile)
 	if err != nil {
 		log.Printf("Error reading message file: %v", err)
-	} 
+	}
 
 	if !isAuthenticated(r) {
 		tmpl.Execute(w, map[string]interface{}{
-			"Title": "Portal",
-			"isAdmin": false,
+			"Title":    "Portal",
+			"isAdmin":  false,
 			"Username": "",
 			"Services": serviceConf,
-			"Message": string(messageContent),
+			"Message":  string(messageContent),
 		})
 	} else {
 		username := getUserProperty(r, "Username")
 		is_admin := getUserProperty(r, "is_admin")
 
 		tmpl.Execute(w, map[string]interface{}{
-			"Title": "Portal",
+			"Title":    "Portal",
 			"Is_admin": is_admin,
 			"Username": username,
 			"Services": serviceConf,
-			"Message": string(messageContent),
+			"Message":  string(messageContent),
 		})
 	}
 }
 
+func isRestrictedPath(path string) (bool, bool) {
+	if strings.HasPrefix(path, "/users") || strings.Contains(path, "🔑") {
+		fmt.Println("need auth")
+		return true, false // need authentication but not admin
+	}
+	if strings.HasPrefix(path, "/admin") {
+		fmt.Println("need admin")
+		return true, true // need admin authentication
+	}
+	fmt.Println("need nothin")
+	return false, false
+}
+
 func fileHandler(w http.ResponseWriter, r *http.Request) {
-    authStatus := isAuthenticated(r)
-    path := r.URL.Path
-    if strings.HasPrefix(path, "/keys") && !authStatus {
-        http.Redirect(w, r, "/login?next=files/"+url.QueryEscape(path), http.StatusFound)
-        return
-    }
+	authStatus := isAuthenticated(r)
+	path := r.URL.Path
+	need_auth, need_admin := isRestrictedPath(path)
+	fmt.Println(need_auth && (!need_admin || !authStatus))
 
-    basePath := strings.TrimPrefix(path, "/files")
-    fullPath := filepath.Join("files", basePath)
+	if need_admin && !(getUserProperty(r, "is_admin") == "true") { // need admin access, the user is connect and is not admin
+		if !authStatus {
+			http.Redirect(w, r, "/login?next=files/"+url.QueryEscape(path), http.StatusFound)
+			fmt.Println(1)
+			return
+		}
+		http.Error(w, "You need an admin account to access this page.", http.StatusForbidden)
+		fmt.Println(3)
+		return
+	} else if need_auth && !authStatus { // this just requires user authentication and the user is not logged in
+		http.Redirect(w, r, "/login?next=files/"+url.QueryEscape(path), http.StatusFound)
+		fmt.Println(1)
+		return
+	}
 
-    info, err := os.Stat(fullPath)
-    if err != nil {
-        http.NotFound(w, r)
-        return
-    }
+	basePath := strings.TrimPrefix(path, "/files")
+	fullPath := filepath.Join("files", basePath)
 
-    if !info.IsDir() {
-        // Serve the file content
+	info, err := os.Stat(fullPath)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if !info.IsDir() {
+		// Serve the file content
 		safePath := filepath.Clean(basePath)
 		fullPath := filepath.Join("files", safePath)
 
-		if strings.HasPrefix(path, "/keys") && !authStatus {
+		if need_admin && !(getUserProperty(r, "is_admin") == "true") { // need admin access, the user is connect and is not admin
+			if !authStatus {
+				http.Redirect(w, r, "/login?next=files/"+url.QueryEscape(path), http.StatusFound)
+				fmt.Println(1)
+				return
+			}
+			http.Error(w, "You need an admin account to access this page.", http.StatusForbidden)
+			fmt.Println(3)
+			return
+		} else if need_auth && !authStatus { // this just requires user authentication and the user is not logged in
 			http.Redirect(w, r, "/login?next=files/"+url.QueryEscape(path), http.StatusFound)
+			fmt.Println(1)
 			return
 		} else {
 			http.ServeFile(w, r, fullPath)
 		}
-        return
-    }
+		return
+	}
 
-    // Directory: List contents
-    entries, err := os.ReadDir(fullPath)
-    if err != nil {
-        http.Error(w, "Failed to read directory", http.StatusInternalServerError)
-        return
-    }
+	// Directory: List contents
+	entries, err := os.ReadDir(fullPath)
+	if err != nil {
+		http.Error(w, "Failed to read directory", http.StatusInternalServerError)
+		return
+	}
 
 	username := getUserProperty(r, "Username")
 
-    files := []struct {
-        Name string
-        URL  string
-    }{}
+	files := []struct {
+		Name   string
+		URL    string
+		RETURN string
+		IS_DIR bool
+	}{}
 
-    for _, entry := range entries {
-        files = append(files, struct {
-            Name string
-            URL  string
-        }{
-            Name: entry.Name(),
-            URL:  path + "/" + entry.Name(),
-        })
-    }
+	for _, entry := range entries {
+		files = append(files, struct {
+			Name   string
+			URL    string
+			RETURN string
+			IS_DIR bool
+		}{
+			Name:   entry.Name(),
+			URL:    path + "/" + entry.Name(),
+			IS_DIR: entry.IsDir(),
+		})
+	}
 
-    tmpl := template.Must(template.ParseFiles("templates/layout.html", "templates/files.html"))
-    tmpl.Execute(w, map[string]interface{}{
-        "Title": "Files",
+	tmpl := template.Must(template.ParseFiles("templates/layout.html", "templates/files.html", "templates/footer.html"))
+	tmpl.Execute(w, map[string]interface{}{
+		"Title":    "Files",
 		"Username": username,
-        "Path":  path,
-        "Files": files,
-    })
+		"Path":     path,
+		"Files":    files,
+		"Return":   filepath.Join("/files", path, "../"), //strip the last part of the path, if the last part is /files than put / instead
+	})
 }
 
 func authMiddleware(next http.Handler, user_admin bool) http.Handler {
@@ -222,10 +265,10 @@ func authMiddleware(next http.Handler, user_admin bool) http.Handler {
 }
 
 func validateCredentials(user, password string) (bool, bool) {
-	
+
 	for _, u := range serviceUsers {
-		if u.Username == user {			
-			password_check := bcrypt.CompareHashAndPassword([]byte(u.BcryptHashedPassword), []byte(password)) == nil 
+		if u.Username == user {
+			password_check := bcrypt.CompareHashAndPassword([]byte(u.BcryptHashedPassword), []byte(password)) == nil
 			is_admin := u.Is_admin
 			return password_check, is_admin
 		}
@@ -233,49 +276,45 @@ func validateCredentials(user, password string) (bool, bool) {
 	return false, false
 }
 
-func getUserProperty(r *http.Request, property string) (string) {
-    session, err := store.Get(r, "session")
-    if err != nil {
-        return ""
-    }
+func getUserProperty(r *http.Request, property string) string {
+	session, err := store.Get(r, "session")
+	if err != nil {
+		return ""
+	}
 
 	is_connected := isAuthenticated(r)
-	if (!is_connected) {
+	if !is_connected {
 		return ""
 	}
 
 	switch property {
 	case "Username":
-    	if userVal, ok := session.Values["user"].(string); ok {
+		if userVal, ok := session.Values["user"].(string); ok {
 			return userVal
 		}
 	case "is_admin":
 		if isAdminVal, ok := session.Values["is_admin"].(bool); ok {
 			if isAdminVal {
 				return "true"
-			} 
-		} 
-	} 
+			}
+		}
+	}
 
 	return ""
 }
 
-func isAuthenticated(r *http.Request) (bool) {
-    session, err := store.Get(r, "session")
-    if err != nil {
-        return false
-    }
+func isAuthenticated(r *http.Request) bool {
+	session, err := store.Get(r, "session")
+	if err != nil {
+		return false
+	}
 
-    if authVal, ok := session.Values["authenticated"].(bool); ok {
+	if authVal, ok := session.Values["authenticated"].(bool); ok {
 		return authVal
 	}
-	
+
 	return false
 }
-
-
-
-
 
 func main() {
 	fmt.Println("Starting the portal")
@@ -296,6 +335,10 @@ func main() {
 	r.HandleFunc("/logout", logoutHandler).Methods("GET")
 	r.PathPrefix("/files").Handler(http.StripPrefix("/files", http.HandlerFunc(fileHandler)))
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	r.HandleFunc("/noaccount", func(w http.ResponseWriter, r *http.Request) {
+		tmpl := template.Must(template.ParseFiles("templates/layout.html", "templates/noaccount.html", "templates/footer.html"))
+		tmpl.Execute(w, map[string]interface{}{})
+	}).Methods("GET")
 
 	// Register the routes from service.yaml
 	for _, route := range serviceConf {
@@ -306,7 +349,7 @@ func main() {
 				r.PathPrefix(route.Path).Handler(authMiddleware(http.StripPrefix(route.Path, proxy), true)) // this will check if the user is authenticated AND if he is admin
 			} else {
 				r.PathPrefix(route.Path).Handler(authMiddleware(http.StripPrefix(route.Path, proxy), false)) // this will check if the user is authenticated but not if he is admin
-				}
+			}
 			// When the user's manager will be done add a check for is_admin here
 
 		} else {

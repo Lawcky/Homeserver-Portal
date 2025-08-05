@@ -87,7 +87,6 @@ html, body {
   white-space: nowrap;
   height: 100%; /* or a specific value like 300px */
   margin: auto 1%;
-  max-height: 300px;
 }
 
 .services-list a {
@@ -96,18 +95,17 @@ html, body {
   scroll-snap-align: start;
   text-decoration: none;
   color: inherit;
-    overflow-y: scroll;
 }
 
 .services-list article {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  height: auto;
+  height: 100%;
   padding: 1rem;
   box-sizing: border-box;
   border-radius: 8px;
-  min-height: auto;
+  min-height: 100%;
   white-space: normal;
   font-size: 1.2em;
 }
@@ -358,85 +356,4 @@ body {background-color: #EDDDD4;} /*background color*/
     background-color: #f0f0f0; /*background for the text section (normal one when a message is set)*/
     border: 2px solid #281B1E; /*border of all text section */
 }
-
-
-/* footer */
-
-html, body {
-  height: 100%;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-main {
-  flex: 1; /* fills space to push footer down */
-  padding: 1rem;
-}
-
-footer {
-  padding: 1rem;
-  text-align: center;
-  color: #281B1E;
-}
-
-
-
-/* Files page : */
-.files-page {
-  font-family: monospace;
-  padding: 2rem;
-  color: #281B1E;
-}
-
-.files-page h1 {
-  font-size: 2.5em;
-  margin-left: 6%;
-}
-
-#directory-listing {
-  list-style: none;
-  padding: 0;
-  margin: 0 5%;
-  border: 2px groove #281B1E;
-  overflow: hidden;
-  border-style:outset;
-}
-
-#directory-listing li {
-  margin: 0.25rem 0;
-  font-size: 1.5em;
-}
-
-#directory-listing a {
-  text-decoration: none;
-  padding: 0.5rem 1rem;
-  display: inline-block;
-  border-radius: 8px;
-  transition: background 0.2s;
-
-}
-
-#directory-listing .dir a {
-  color: #245779;
-  font-weight: bold;
-}
-
-#directory-listing .file a {
-  color: #281B1E;
-}
-
-#directory-listing .dir a::before {
-  content: "📁 ";
-}
-
-#directory-listing .file a::before {
-  content: "📄 ";
-}
-
-#directory-listing a:hover {
-  background-color: #f0f0f0;
-}
-
 

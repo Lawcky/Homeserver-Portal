@@ -16,18 +16,23 @@
         </style>
         <nav class="navbar">
             <div class="nav-links">
+                {{ if .Username}}<a href="/logout">Logout</a>{{else}}<a href="/login">Login</a><style>.nav-title {margin-left: -13px;}</style><!--i'm terrible at css please dont judge-->{{end}}
                 <a href="/files/">Files</a>
-                {{ if.Username}}<a href="/logout">Logout</a><style>.nav-title {margin-left: 0;}</style><!-- i'm terrible at css dont question this please -->{{end}}
             </div>
             <div class="nav-title">
                 <h1><a href="/">Homeserver-Portal</a></h1>
             </div>
             <div class="nav-user">
-                {{ if .Username }}<span class="nav-username">{{ .Username }}</span>{{ else }}<a href="/login">Login</a>{{ end }}
+                {{ if .Username }}<span class="nav-username">{{ .Username }}</span>{{ end }}
                 {{ if .icon }}<img src="/static/user/{{ .icon }}">{{ else }}<img src="/static/favicon.ico">{{ end }}
             </div>
         </nav>
     </header>
+    <main>
     {{ template "content" . }}
+    </main>
 </body>
+<footer>
+    {{ template "footer" . }}
+</footer>
 </html>

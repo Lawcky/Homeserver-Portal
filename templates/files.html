@@ -1,8 +1,24 @@
 {{ define "content" }}
-<h1>Directory Listing: {{ .Path }}</h1>
-<ul>
-{{ range .Files }}
-    <li><a href="https://dev.lawcky.net/files/{{ .URL }}">{{ .Name }}</a></li>
-{{ end }}
-</ul>
+<div class="files-page">
+    <h1>Directory Listing: "{{ .Path }}"</h1>
+    <ul id="directory-listing">
+        <li id="return-path"><a href="https://dev.lawcky.net{{ .Return }}">../ Return</a></li> <!--link to return back -->
+
+        {{ range .Files }}
+
+            {{ if .IS_DIR }}
+                <li class="dir"><a href="https://dev.lawcky.net/files{{ .URL }}">{{ .Name }}</a></li>
+            {{ end }}
+
+        {{ end }}
+
+        {{ range .Files }}
+            {{ if .IS_DIR }}
+                {{ continue }}
+            {{ else }}
+                <li class="file"><a href="https://dev.lawcky.net/files{{ .URL }}">{{ .Name }}</a></li>
+            {{ end }}
+        {{ end }}
+    </ul>
+</div>
 {{ end }}

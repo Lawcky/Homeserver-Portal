@@ -1,1 +1,2 @@
-Homeserver-Portal still in developpement, services access may not be available yet
+This is an access portal i'm developping in Go, will be the one distributing access to services and files i will host at home : 
+https://github.com/Lawcky/Homeserver-Portal/tree/main
