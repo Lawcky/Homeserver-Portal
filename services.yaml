@@ -1,5 +1,6 @@
 # services.yaml
 - path: /jellyfin
+  domain: ""
   target: http://placeholder.com
   display_name: "Jellyfin"
   description: "Jellyfin Media Server (Netflix alternative)"
@@ -8,6 +9,7 @@
   is_admin: false
   
 - path: /site
+  domain: ""
   target: http://localhost:8080
   display_name: "My Website"
   description: "My personal website"
@@ -15,8 +17,9 @@
   need_auth: false
   is_admin: false
   
-- path: /affine
-  target: http://127.0.0.1:12951
+- path: /
+  domain: affine.lawcky.net
+  target: http://localhost:3010
   display_name: "Affine"
   description: "Affine Note-taking app"
   icon: ""
@@ -24,22 +27,16 @@
   is_admin: false
 
 - path: /joplin
-  target: http://127.0.0.1:12951
+  domain: ""
+  target: http://localhost:12951
   display_name: "Joplin"
   description: "Joplin Note-taking app (legacy)"
   icon: ""
   need_auth: false
   is_admin: false
 
-- path: /jopling
-  target: http://127.0.0.1:12952
-  display_name: "Placeholder"
-  description: "PLACEHOLDER FOR SERVICES"
-  icon: ""
-  need_auth: false
-  is_admin: false
-
 - path: /test
+  domain: ""
   target: http://testingthis.com
   display_name: "Placeholder Admin"
   description: "SIMPLE PLACEHOLDER FOR ADMIN TESTS"
@@ -47,10 +44,4 @@
   need_auth: true
   is_admin: true
 
-- path: /testing
-  target: http://testingthis.com
-  display_name: "Placeholder Admin"
-  description: "SIMPLE PLACEHOLDER FOR ADMIN TESTS"
-  icon: ""
-  need_auth: false
-  is_admin: true
+

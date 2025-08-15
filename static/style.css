@@ -96,7 +96,7 @@ html, body {
   scroll-snap-align: start;
   text-decoration: none;
   color: inherit;
-    overflow-y: scroll;
+  overflow-y: hidden;
 }
 
 .services-list article {

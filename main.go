@@ -12,7 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
+	"crypto/tls"
+	"golang.org/x/crypto/acme/autocert"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 	"golang.org/x/crypto/bcrypt"
@@ -21,13 +22,14 @@ import (
 
 var (
 	store = sessions.NewCookieStore([]byte("super-secret-key"))
-
+	whitelist = autocert.HostWhitelist("dev.lawcky.net", "affine.lawcky.net")
 	serviceConf  []ServiceRoute
 	serviceUsers []UserAccount
 )
 
 type ServiceRoute struct {
 	Path        string `yaml:"path"`
+	Domain	  	string `yaml:"domain"` // only used for subdomains, if not keep empty
 	Target      string `yaml:"target"`
 	DisplayName string `yaml:"display_name"`
 	Description string `yaml:"description"`
@@ -65,8 +67,40 @@ func makeReverseProxy(target string) http.Handler {
 	if err != nil {
 		log.Fatalf("Invalid proxy target: %v", err)
 	}
-	return httputil.NewSingleHostReverseProxy(targetURL)
+
+	proxy := httputil.NewSingleHostReverseProxy(targetURL)
+
+	originalDirector := proxy.Director
+	proxy.Director = func(req *http.Request) {
+		originalDirector(req)
+
+		// Preserve Host header
+		// req.Host = targetURL.Host //makes somes apps crash
+
+		// set custom headers
+		req.Header.Set("X-Forwarded-Host", req.Host)
+		req.Header.Set("X-Real-IP", req.RemoteAddr)
+		req.Header.Set("X-Forwarded-Proto", "https")
+		req.Header.Set("X-Forwarded-For", req.RemoteAddr)
+		// fmt.Println(req)
+
+		req.Header.Set("Upgrade", req.Header.Get("Upgrade"))
+		req.Header.Set("Connection", "Upgrade")
+	}
+
+	proxy.ModifyResponse = func(resp *http.Response) error {
+		// log.Printf("Response Headers from %s:\n%v", target, resp.Header)
+		return nil
+	}
+
+	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+		log.Printf("Reverse proxy error: %v", err)
+		http.Error(w, "Proxy error", http.StatusBadGateway)
+	}
+
+	return proxy
 }
+
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
@@ -93,6 +127,8 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	is_ok, is_admin := validateCredentials(username, password)
 	if is_ok {
 		session, _ := store.Get(r, "session")
+		session.Options.HttpOnly = true
+		session.Options.Secure = true
 		session.Values["user"] = username
 		session.Values["authenticated"] = true
 		session.Values["is_admin"] = is_admin
@@ -155,14 +191,11 @@ func portalHandler(w http.ResponseWriter, r *http.Request) {
 
 func isRestrictedPath(path string) (bool, bool) {
 	if strings.HasPrefix(path, "/users") || strings.Contains(path, "🔑") {
-		fmt.Println("need auth")
 		return true, false // need authentication but not admin
 	}
 	if strings.HasPrefix(path, "/admin") {
-		fmt.Println("need admin")
 		return true, true // need admin authentication
 	}
-	fmt.Println("need nothin")
 	return false, false
 }
 
@@ -170,20 +203,16 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 	authStatus := isAuthenticated(r)
 	path := r.URL.Path
 	need_auth, need_admin := isRestrictedPath(path)
-	fmt.Println(need_auth && (!need_admin || !authStatus))
 
 	if need_admin && !(getUserProperty(r, "is_admin") == "true") { // need admin access, the user is connect and is not admin
 		if !authStatus {
 			http.Redirect(w, r, "/login?next=files/"+url.QueryEscape(path), http.StatusFound)
-			fmt.Println(1)
 			return
 		}
 		http.Error(w, "You need an admin account to access this page.", http.StatusForbidden)
-		fmt.Println(3)
 		return
 	} else if need_auth && !authStatus { // this just requires user authentication and the user is not logged in
 		http.Redirect(w, r, "/login?next=files/"+url.QueryEscape(path), http.StatusFound)
-		fmt.Println(1)
 		return
 	}
 
@@ -204,15 +233,12 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 		if need_admin && !(getUserProperty(r, "is_admin") == "true") { // need admin access, the user is connect and is not admin
 			if !authStatus {
 				http.Redirect(w, r, "/login?next=files/"+url.QueryEscape(path), http.StatusFound)
-				fmt.Println(1)
 				return
 			}
 			http.Error(w, "You need an admin account to access this page.", http.StatusForbidden)
-			fmt.Println(3)
 			return
 		} else if need_auth && !authStatus { // this just requires user authentication and the user is not logged in
 			http.Redirect(w, r, "/login?next=files/"+url.QueryEscape(path), http.StatusFound)
-			fmt.Println(1)
 			return
 		} else {
 			http.ServeFile(w, r, fullPath)
@@ -328,7 +354,7 @@ func isAuthenticated(r *http.Request) bool {
 
 	return false
 }
-
+	
 func main() {
 	fmt.Println("Starting the portal")
 	err := loadRoutes("services.yaml")
@@ -343,9 +369,39 @@ func main() {
 
 	r := mux.NewRouter()
 
-	r.HandleFunc("/", portalHandler).Methods("GET")
-	r.HandleFunc("/login", loginHandler).Methods("GET", "POST")
-	r.HandleFunc("/logout", logoutHandler).Methods("GET")
+	// 1) Register domain/path reverse proxies
+	for _, route := range serviceConf {
+		proxy := makeReverseProxy(route.Target)
+
+		if route.Domain != "" {
+			hostRoute := r.Host(route.Domain)
+
+			if route.Path != "" && route.Path != "/" {
+				hostRoute = hostRoute.PathPrefix(route.Path)
+				proxy = http.StripPrefix(route.Path, proxy)
+			}
+
+			if route.Need_Auth || route.Is_admin {
+				hostRoute.Handler(authMiddleware(proxy, route.Is_admin))
+			} else {
+				hostRoute.Handler(proxy)
+			}
+
+			log.Printf("Registered domain route: host=%s path=%s -> %s", route.Domain, route.Path, route.Target)
+			continue
+		}
+
+		// path-based fallback
+		if route.Need_Auth || route.Is_admin {
+			r.PathPrefix(route.Path).Handler(authMiddleware(http.StripPrefix(route.Path, proxy), route.Is_admin))
+		} else {
+			r.PathPrefix(route.Path).Handler(http.StripPrefix(route.Path, proxy))
+		}
+
+		log.Printf("Registered path route: path=%s -> %s", route.Path, route.Target)
+	}
+
+	// 2) Static, files and other specific handlers next
 	r.PathPrefix("/files").Handler(http.StripPrefix("/files", http.HandlerFunc(fileHandler)))
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	r.HandleFunc("/noaccount", func(w http.ResponseWriter, r *http.Request) {
@@ -353,47 +409,33 @@ func main() {
 		tmpl.Execute(w, map[string]interface{}{})
 	}).Methods("GET")
 
-	// Register the routes from service.yaml
-	for _, route := range serviceConf {
-		proxy := makeReverseProxy(route.Target)
-		if route.Need_Auth || route.Is_admin {
+	// 3) Portal root/save-all-last
+	r.HandleFunc("/", portalHandler).Methods("GET")
+	r.HandleFunc("/login", loginHandler).Methods("GET", "POST")
+	r.HandleFunc("/logout", logoutHandler).Methods("GET")
 
-			if route.Is_admin {
-				r.PathPrefix(route.Path).Handler(authMiddleware(http.StripPrefix(route.Path, proxy), true)) // this will check if the user is authenticated AND if he is admin
-			} else {
-				r.PathPrefix(route.Path).Handler(authMiddleware(http.StripPrefix(route.Path, proxy), false)) // this will check if the user is authenticated but not if he is admin
-			}
-			// When the user's manager will be done add a check for is_admin here
 
-		} else {
-			r.PathPrefix(route.Path).Handler(http.StripPrefix(route.Path, proxy))
-		}
-		log.Printf("Registered route: %s -> %s (Need Auth: %t, Is Admin Only: %t)", route.Path, route.Target, route.Need_Auth, route.Is_admin)
-	}
+	m := &autocert.Manager{
+        Prompt:     autocert.AcceptTOS,
+        HostPolicy: whitelist,
+        Cache:      autocert.DirCache(".certs"),
+    }
 
-	httpsServer := &http.Server{
-		Addr:    ":443",
-		Handler: r,
-	}
+    httpsServer := &http.Server{
+        Addr:      ":443",
+        Handler:   r,
+        TLSConfig: &tls.Config{GetCertificate: m.GetCertificate},
+    }
 
-	go func() {
-		log.Println("Redirecting HTTP to HTTPS")
-		http.ListenAndServe(":80", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			http.Redirect(w, r, "https://"+r.Host+r.RequestURI, http.StatusMovedPermanently)
-		}))
-	}()
+    go func() {
+        log.Println("Starting ACME HTTP challenge handler on :80")
+        if err := http.ListenAndServe(":80", m.HTTPHandler(nil)); err != nil {
+            log.Fatalf("ACME HTTP server failed: %v", err)
+        }
+    }()
 
-	// // temporary fix : (allows service /files to webroot)
-	// r.PathPrefix("/").Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	// 	path := strings.TrimPrefix(r.URL.Path, "/")
-	// 	fullPath := filepath.Join("files", path)
-	// 	http.ServeFile(w, r, fullPath)
-	// }))
-
-	log.Println("Serving HTTPS on port 443")
-	err = httpsServer.ListenAndServeTLS(".certs/fullchain.pem", ".certs/privkey.pem")
-
-	if err != nil {
-		log.Fatal(err)
-	}
+    log.Println("Serving HTTPS on port 443")
+    if err := httpsServer.ListenAndServeTLS("", ""); err != nil {
+        log.Fatalf("HTTPS server failed: %v", err)
+    }
 }

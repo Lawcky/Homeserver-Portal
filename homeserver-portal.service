@@ -1,0 +1,15 @@
+[Unit]
+Description=start the portal as root (testing env)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/homeserver-portal/homeserver-portal
+Restart=always
+RestartSec=5
+User=root
+WorkingDirectory=/opt/homeserver-portal
+
+[Install]
+WantedBy=multi-user.target
+
