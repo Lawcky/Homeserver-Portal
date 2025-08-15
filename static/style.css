@@ -425,6 +425,11 @@ footer {
 
 }
 
+#directory-listing {
+  margin: 1%;
+  padding: 1%;
+}
+
 #directory-listing .dir a {
   color: #245779;
   font-weight: bold;
@@ -442,8 +447,20 @@ footer {
   content: "📄 ";
 }
 
+#directory-listing .file {
+  display: flex;
+  justify-content: space-between;
+}
+
+#directory-listing .file .downloadlink::before {
+  content: "📦 ";
+  
+}
+
+#directory-listing .file .downloadlink {
+  font-size: large;
+}
+
 #directory-listing a:hover {
   background-color: #f0f0f0;
 }
-
-

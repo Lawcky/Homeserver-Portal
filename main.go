@@ -101,19 +101,22 @@ func makeReverseProxy(target string) http.Handler {
 	return proxy
 }
 
-
 func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		next := r.URL.Query().Get("next")
+		action := r.URL.Query().Get("action")
+
 		message := r.URL.Query().Get("message")
 		tmpl := template.Must(template.ParseFiles("templates/layout.html", "templates/login.html", "templates/footer.html"))
+
 		if message == "Invalid-credentials" {
 			tmpl.Execute(w, map[string]string{
 				"Next":    next,
+				"Action": action,
 				"Message": "Invalid credentials, please try again.",
 			})
 		} else {
-			tmpl.Execute(w, map[string]string{"Next": next})
+			tmpl.Execute(w, map[string]string{"Next": next, "Action": action})
 		}
 
 		return
@@ -135,8 +138,10 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		session.Save(r, w)
 
 		next := r.Form.Get("next")
+		action := r.Form.Get("action")
+
 		if next != "" {
-			http.Redirect(w, r, next, http.StatusFound)
+			http.Redirect(w, r, next+"?action="+action, http.StatusFound)
 		} else {
 			http.Redirect(w, r, "/", http.StatusFound)
 		}
@@ -202,17 +207,20 @@ func isRestrictedPath(path string) (bool, bool) {
 func fileHandler(w http.ResponseWriter, r *http.Request) {
 	authStatus := isAuthenticated(r)
 	path := r.URL.Path
+	action := r.URL.Query().Get("action")
 	need_auth, need_admin := isRestrictedPath(path)
 
 	if need_admin && !(getUserProperty(r, "is_admin") == "true") { // need admin access, the user is connect and is not admin
+		
 		if !authStatus {
-			http.Redirect(w, r, "/login?next=files/"+url.QueryEscape(path), http.StatusFound)
+			http.Redirect(w, r, "/login?next=files/"+url.QueryEscape(path)+"&action="+action, http.StatusFound)
 			return
 		}
+
 		http.Error(w, "You need an admin account to access this page.", http.StatusForbidden)
 		return
 	} else if need_auth && !authStatus { // this just requires user authentication and the user is not logged in
-		http.Redirect(w, r, "/login?next=files/"+url.QueryEscape(path), http.StatusFound)
+		http.Redirect(w, r, "/login?next=files/"+url.QueryEscape(path)+"&action="+action, http.StatusFound)
 		return
 	}
 
@@ -232,15 +240,19 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 
 		if need_admin && !(getUserProperty(r, "is_admin") == "true") { // need admin access, the user is connect and is not admin
 			if !authStatus {
-				http.Redirect(w, r, "/login?next=files/"+url.QueryEscape(path), http.StatusFound)
+				http.Redirect(w, r, "/login?next=files/"+url.QueryEscape(path)+"&action="+action, http.StatusFound)
 				return
 			}
 			http.Error(w, "You need an admin account to access this page.", http.StatusForbidden)
 			return
 		} else if need_auth && !authStatus { // this just requires user authentication and the user is not logged in
-			http.Redirect(w, r, "/login?next=files/"+url.QueryEscape(path), http.StatusFound)
+			http.Redirect(w, r, "/login?next=files/"+url.QueryEscape(path)+"&action="+action, http.StatusFound)
 			return
 		} else {
+			// if the GET parameter "action" is set to download then make the file downloaded, else just serve it 
+			if r.URL.Query().Get("action") == "download" || r.URL.Query().Get("action") == "dl" {
+				w.Header().Set("Content-Disposition", "attachment; filename="+filepath.Base(fullPath))
+			} 
 			http.ServeFile(w, r, fullPath)
 		}
 		return

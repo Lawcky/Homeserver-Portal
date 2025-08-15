@@ -1,6 +1,6 @@
 {{ define "content" }}
 <div class="files-page">
-    <h1>Directory Listing: "{{ .Path }}"</h1>
+    <h1>Directory Listing: "{{if .Path }}{{ .Path }}{{else}}/{{end}}"</h1>
     <ul id="directory-listing">
         <li id="return-path"><a href="https://dev.lawcky.net{{ .Return }}">../ Return</a></li> <!--link to return back -->
 
@@ -16,7 +16,7 @@
             {{ if .IS_DIR }}
                 {{ continue }}
             {{ else }}
-                <li class="file"><a href="https://dev.lawcky.net/files{{ .URL }}">{{ .Name }}</a></li>
+                <li class="file"><a href="https://dev.lawcky.net/files{{ .URL }}">{{ .Name }}</a><a class="downloadlink" href="https://dev.lawcky.net/files{{ .URL }}?action=download">download</a></li>
             {{ end }}
         {{ end }}
     </ul>
