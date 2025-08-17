@@ -26,8 +26,8 @@
 
   <input type="hidden" name="next" value="{{.Next}}">
   <input type="hidden" name="action" value="{{.Action}}">
+  <input name="submit" type="Submit" value="Login" class="submit-Button">
 
-  <input name="submit" type="Submit" value="Login">
   {{ if .Message }}
   <div class="error-message">
     <p>{{.Message}}</p>
@@ -40,4 +40,4 @@
   </section>
 </div>
 
-  {{ end }}
+{{ end }}

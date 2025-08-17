@@ -1,0 +1,77 @@
+{{ define "content" }}
+
+
+<section class="portal-fronttext">
+  <h2>Upload page</h2>
+  <p>Upload your files here and access them <a href="/files">on this page</a>.</p>
+  <p>The Upload directory will vary depending on your account.</p>
+</section>
+
+
+
+<!-- 
+gros bouton anon/user/admin 
+
+En selection par defaut sur user
+
+si upload user alors le fichier est upload dans users/username/uploads
+si admin alors dans admin/uploads
+si anon alors dans uploads
+-->
+
+
+<div class="upload-page">
+    <section class="upload-container">
+
+    <form id="uploadForm"  action="/upload" method="POST" enctype="multipart/form-data">
+        <div class="upload-targets" role="radiogroup" aria-label="Upload target">
+            <input type="radio" name="uploadTarget" id="anon"  value="anon">
+            <label for="anon" class="badge">Anons</label>
+            <input type="radio" name="uploadTarget" id="user"  value="user" checked>
+            <label for="user" class="badge">Users</label>
+            <input type="radio" name="uploadTarget" id="admin" value="admin" {{if .Is_admin}}{{else}}disabled{{end}}>
+            <label for="admin" class="badge">Admins</label>
+        </div>
+
+    
+        <div id="dropzone" class="upload-file" tabindex="0" role="button" aria-label="Drop files here or click to select">
+            <input id="file-upload" class="file-input" type="file" name="files" multiple>
+            <div class="drop-content">
+            <svg width="36" height="36" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2l4 4h-3v6h-2V6H8l4-4zM6 14v6h12v-6h-2v4H8v-4H6z" fill="currentColor"/>
+            </svg>
+            <div class="drop-text">
+                <strong>Drop files here</strong>
+                <div class="muted">or click to select (multiple allowed)</div>
+            </div>
+            </div>
+        </div>
+
+        <div id="fileList" class="file-list" aria-live="polite"></div>
+
+        <div class="upload-actions">
+            <button id="uploadBtn" type="button" class="btn submit-Button">Upload</button>
+            <input name="submit" type="submit" value="Submit (fallback)" style="display:none">
+        </div>
+    </form>
+
+
+
+    {{ if .Message }}
+        <div class="error-message">
+        <p>{{.Message}}</p>
+        </div>
+    {{ end }}
+
+
+    <script src="/static/upload.js"></script> 
+
+    </section>
+</div>
+
+
+
+
+
+
+{{ end }}

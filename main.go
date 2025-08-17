@@ -2,6 +2,7 @@
 package main
 
 import (
+	"io"
 	"fmt"
 	"html/template"
 	"log"
@@ -112,7 +113,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		if message == "Invalid-credentials" {
 			tmpl.Execute(w, map[string]string{
 				"Next":    next,
-				"Action": action,
+				"Action": "?action="+action,
 				"Message": "Invalid credentials, please try again.",
 			})
 		} else {
@@ -141,7 +142,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		action := r.Form.Get("action")
 
 		if next != "" {
-			http.Redirect(w, r, next+"?action="+action, http.StatusFound)
+			http.Redirect(w, r, next+action, http.StatusFound)
 		} else {
 			http.Redirect(w, r, "/", http.StatusFound)
 		}
@@ -211,7 +212,7 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 	need_auth, need_admin := isRestrictedPath(path)
 
 	if need_admin && !(getUserProperty(r, "is_admin") == "true") { // need admin access, the user is connect and is not admin
-		
+
 		if !authStatus {
 			http.Redirect(w, r, "/login?next=files/"+url.QueryEscape(path)+"&action="+action, http.StatusFound)
 			return
@@ -295,6 +296,113 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 		"Files":    files,
 		"Return":   filepath.Join("/files", path, "../"), //strip the last part of the path, if the last part is /files than put / instead
 	})
+}
+
+func uploadHandler(w http.ResponseWriter, r *http.Request) {
+
+	if (!isAuthenticated(r)) {
+		http.Redirect(w, r, "/login?next=/upload", http.StatusFound)
+		return
+	}
+
+	// displays the page
+	if r.Method == "GET" {
+		tmpl := template.Must(template.ParseFiles("templates/layout.html", "templates/upload.html", "templates/footer.html"))
+		username := getUserProperty(r, "Username")
+		is_admin := getUserProperty(r, "is_admin")
+		tmpl.Execute(w, map[string]interface{}{
+			"Title":    "Upload",
+			"Is_admin": is_admin,
+			"Username": username,
+			// "Message":  string(messageContent),
+		})
+		return
+	} else if r.Method == "POST" {
+
+		err := r.ParseMultipartForm(64 << 20) // 64MB max memory
+		if err != nil {
+			http.Error(w, "Invalid form", http.StatusBadRequest)
+			return
+		}
+
+		const maxFileSize = 10 * 1024 * 1024 // 10MB
+
+		uploaded := r.MultipartForm.File["files"]
+		if len(uploaded) == 0 {
+			http.Error(w, "No files", http.StatusBadRequest)
+			return
+		} else if getUserProperty(r, "is_admin") != "true"{ // if user is not admin check file's size
+			for _, f := range uploaded {
+				if f.Size > maxFileSize {
+					http.Error(w, "File too large (max 5MB allowed for non-admins)", http.StatusForbidden)
+					return
+				}
+			}
+		}
+
+		uploadTarget := r.Form.Get("uploadTarget")
+		destDir := ""
+
+		switch uploadTarget{
+			case "anon":
+				destDir = filepath.Join("files", "uploads")
+			case "user":
+				user := getUserProperty(r, "Username")
+				destDir = filepath.Join("files", "users", user, "uploads")
+			case "admin":
+				if (getUserProperty(r, "is_admin") == "true") {
+					destDir = filepath.Join("files", "admin", "uploads")
+				} else {
+					http.Error(w, "Forbidden", http.StatusForbidden)
+				}
+			default:
+				http.Error(w, "Wrong uploadTarget", http.StatusForbidden)
+				return
+		}
+
+		// Check if "files" directory size exceeds maxDirSize (to avoid filling whole server)
+
+		const maxDirSize = 6 * 1024 * 1024 * 1024 // 2GB
+		var dirSize int64 = 0
+
+		err = filepath.Walk("files", func(_ string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			dirSize += info.Size()
+		}
+		return nil
+		})
+		
+		if err != nil {
+			http.Error(w, "Server error checking directory size", http.StatusInternalServerError)
+			return
+		}
+
+		if dirSize >= maxDirSize {
+			http.Error(w, "No more Available Space", http.StatusInternalServerError)
+			return
+		}
+		
+		os.MkdirAll(destDir, 0755)
+		var saved []string
+
+		for _, fh := range uploaded {
+			src, err := fh.Open()
+			if err != nil { continue }
+			defer src.Close()
+			outPath := filepath.Join(destDir, filepath.Base(fh.Filename))
+			out, err := os.Create(outPath)
+			if err != nil { src.Close(); continue }
+			defer out.Close()
+			io.Copy(out, src)
+			saved = append(saved, outPath)
+		}
+
+		return
+
+	}
 }
 
 func authMiddleware(next http.Handler, user_admin bool) http.Handler {
@@ -415,6 +523,7 @@ func main() {
 
 	// 2) Static, files and other specific handlers next
 	r.PathPrefix("/files").Handler(http.StripPrefix("/files", http.HandlerFunc(fileHandler)))
+	r.HandleFunc("/upload", uploadHandler).Methods("GET", "POST")
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	r.HandleFunc("/noaccount", func(w http.ResponseWriter, r *http.Request) {
 		tmpl := template.Must(template.ParseFiles("templates/layout.html", "templates/noaccount.html", "templates/footer.html"))

@@ -1,64 +1,46 @@
 html, body {
-    margin: 0;
-    padding: 0;
+  margin: 0;
+  padding: 0;
 }
-
-
-/* ugly asf but will work it later */
-
 /* headers */
 
-.navbar {
-    display: flex;
-    justify-content:space-between;
-    align-items: center;
-}
+.navbar {display: flex;justify-content:space-between;align-items: center;min-height: 70px;}
 
-.navbar a {
-    text-decoration: none;
-}
+.navbar a {text-decoration: none;}
 
 .nav-title {
-    font-size: 1.2em;
-    margin-left: -25px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.2em;
+  /* margin-left: -25px; */
 }
 
-.navbar a:hover {
-    text-decoration: underline;
-}
+.navbar a:hover {text-decoration: underline;}
 
 .nav-links {
-    display: flex;
-    gap: 15px;
-    justify-content: left;
-    align-items: center;
-    padding: 10px;
-    font-size: x-large;
+  display: flex;
+  gap: 15px;
+  justify-content: left;
+  align-items: center;
+  padding: 10px;
+  font-size: x-large;
 }
 
-.nav-user {
-    display: flex;
-    justify-content: space-evenly;
-    width: 130px;
-    height: auto;
-}
+.nav-user {display: flex;position: absolute;right:0; justify-content: space-around;}
 
 .nav-user span, .nav-user a {
-    display: flex;
-    vertical-align: middle;
-    align-items: center;
+  display: flex;
+  vertical-align: middle;
+  align-items: center;
 }
 
-.nav-user a {
-    font-size: larger;
-}
+.nav-user a {font-size: larger;}
 
-.nav-username {
-    font-weight: bold;
-    font-size: larger;
-}
+.nav-username {font-weight: bold;font-size: larger;}
 
 .nav-user img {
+    vertical-align: middle;
     width: 60px;
     height: 60px;
     border-radius: 50%;
@@ -73,9 +55,9 @@ html, body {
     margin: 3% 15%;
 }
 
-.service-item {
-    border-radius: 8px;
-}
+.portal-fronttext a {color: #984447}
+
+.service-item {border-radius: 8px;}
 
 .services-list  {
   display: flex;
@@ -112,10 +94,7 @@ html, body {
   font-size: 1.2em;
 }
 
-.services-list article h3 {
-    font-size: 1.5em;
-    margin-top: 0;
-}
+.services-list article h3 {font-size: 1.5em;margin-top: 0;}
 
 .services-list img {
   width: 60px;
@@ -125,9 +104,7 @@ html, body {
 
 }
 
-.service-note {
-    padding: 3px;
-}
+.service-note {padding: 3px;}
 
 .service-item p {
     margin-bottom: 36px;
@@ -136,10 +113,7 @@ html, body {
     white-space: normal;
 }
 
-.services-list.dragging {
-    cursor: grabbing;
-    user-select: none;
-}
+.services-list.dragging {cursor: grabbing;user-select: none;}
 
 .text-section {
     text-align: center;
@@ -163,10 +137,6 @@ html, body {
 }
 
 .login-page {
-    /* position: absolute;
-    top: 40%;
-    left: 50%;
-    transform: translate(-50%, -50%); */
     width: 29vw;
     background: white;
     border-radius: 10px;
@@ -181,10 +151,7 @@ html, body {
     font-size: 2em;
 }
 
-.login-page form {
-    padding: 0 40px;
-    box-sizing: border-box;
-}
+.login-page form {padding: 0 40px;box-sizing: border-box;}
 
 form .txt_field{
   position: relative;
@@ -223,19 +190,12 @@ form .txt_field{
   transition: .5s;
 }
 
-.txt_field input:focus ~ label,
-.txt_field input:valid ~ label{
-  top: -5px;
-  color: #984447;
-}
+.txt_field input:focus ~ label,.txt_field input:valid ~ label{top: -5px;color: #984447;}
 
-.txt_field input:focus ~ span::before,
-.txt_field input:Valid ~ span::before{
-  width: 100%;
-}
+.txt_field input:focus ~ span::before,.txt_field input:Valid ~ span::before{width: 100%;}
 
 
-input[type="Submit"]{
+.submit-Button{
   width: 100%;
   height: 50px;
   border: 1px solid;
@@ -243,14 +203,9 @@ input[type="Submit"]{
   font-size: 18px;
   font-weight: 700;
   cursor: pointer;
-
 }
 
-input[type="Submit"]:hover{
-  background: #984447;
-  color: #e9f4fb;
-  transition: .5s;
-}
+.submit-Button:hover{background: #984447;color: #e9f4fb;transition: .5s;}
 
 .signup_link{
   margin: 30px 0;
@@ -259,20 +214,11 @@ input[type="Submit"]:hover{
   color: #666666;
 }
 
-.signup_link a{
-  color: #984447;
-  text-decoration: none;
-}
+.signup_link a{color: #984447;text-decoration: none;}
 
-.signup_link a:hover{
-  text-decoration: underline;
-}
+.signup_link a:hover{text-decoration: underline;}
 
-.error-message {
-    color: red;
-    text-align: center;
-    margin-top: 10px;
-}
+.error-message {color: red;text-align: center;margin-top: 10px;}
 
 
 /* no account page */
@@ -283,30 +229,17 @@ input[type="Submit"]:hover{
     width: 100%;
 }
 
-#no-account-image {
-    width: 60%;
-}
+#no-account-image {width: 60%;}
 
 /* footer */
 
-footer p {
+footer p {text-align: center;margin: 50px auto 25px auto;width: fit-content;font-size: 1.2em;}
 
-  text-align: center;
-  margin: 50px auto 25px auto; /* Adds space above and centers horizontally */
-  width: fit-content;
-  font-size: 1.2em;
-}
-
-footer a {
-    text-decoration: none;
-    color: #984447;
-}
+footer a {text-decoration: none;color: #984447;}
 
 /* General colors : */
 
 body {background-color: #EDDDD4;} /*background color*/
-
-/* headers */
 
 .navbar {
     background-color: #281B1E; /*navbar (header bar)*/
@@ -315,9 +248,7 @@ body {background-color: #EDDDD4;} /*background color*/
     border-bottom-right-radius: 8px;
 }
 
-.navbar a {
-    color: white; /*text of navbar (except username when connected)*/
-}
+.navbar a {color: white; /*text of navbar (except username when connected)*/}
 
 
 .portal-fronttext {
@@ -325,9 +256,7 @@ body {background-color: #EDDDD4;} /*background color*/
     font-size: 1.3em;
 }
 
-.portal-fronttext h1 {
-    font-size: 1.1em;
-}
+.portal-fronttext h1 {font-size: 1.1em;}
 
 .admin-privileges {
     color:#984447; /*color of the "administrative privileges" text when connected as admin*/
@@ -377,10 +306,7 @@ html, body {
   min-height: 100vh;
 }
 
-main {
-  flex: 1; /* fills space to push footer down */
-  padding: 1rem;
-}
+main {flex: 1;padding: 1rem;}
 
 footer {
   padding: 1rem;
@@ -397,10 +323,7 @@ footer {
   color: #281B1E;
 }
 
-.files-page h1 {
-  font-size: 2.5em;
-  margin-left: 6%;
-}
+.files-page h1 {font-size: 2.5em;margin-left: 6%;}
 
 #directory-listing {
   list-style: none;
@@ -411,10 +334,7 @@ footer {
   border-style:outset;
 }
 
-#directory-listing li {
-  margin: 0.25rem 0;
-  font-size: 1.5em;
-}
+#directory-listing li {margin: 0.25rem 0;font-size: 1.5em;}
 
 #directory-listing a {
   text-decoration: none;
@@ -425,42 +345,129 @@ footer {
 
 }
 
-#directory-listing {
-  margin: 1%;
-  padding: 1%;
+#directory-listing { margin: 1%; padding: 1%;}
+
+#directory-listing .dir a {color: #245779;font-weight: bold;}
+
+#directory-listing .file a {color: #281B1E;}
+
+#directory-listing .dir a::before {content: "📁 ";}
+
+#directory-listing .file a::before {content: "📄 ";}
+
+#directory-listing .file {display: flex;justify-content: space-between;}
+
+#directory-listing .file .downloadlink::before {content: "📦 ";}
+
+#directory-listing .file .downloadlink {font-size: large;}
+
+#directory-listing a:hover {background-color: #f0f0f0;}
+
+/* upload page */
+
+.upload-page {display: flex;justify-content: center;align-items: center;}
+
+.upload-container {
+  width: 100%;
+  margin-right: 2%;
+  margin-left: 1%;
 }
 
-#directory-listing .dir a {
-  color: #245779;
-  font-weight: bold;
+.upload-targets {
+  display: inline-flex;   
+  width: 100%;
+  margin: 0;
+  justify-content: center;
+  align-items: center;
+  background: transparent;
+  padding: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-spacing: 0 50px;
+  background: rgba(0,0,0,0.02);
 }
 
-#directory-listing .file a {
+.upload-targets input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.upload-targets .badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.85rem 13%;
+  font-size: 1.5rem;
+  border-radius: 999px;  
+  cursor: pointer;
+  user-select: none;
   color: #281B1E;
+  transition: background 160ms ease, transform 120ms ease, box-shadow 160ms ease;
+  box-shadow: none;
 }
 
-#directory-listing .dir a::before {
-  content: "📁 ";
+.upload-targets .badge:hover,
+.upload-targets .badge:focus {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+  background-color: #984447;
 }
 
-#directory-listing .file a::before {
-  content: "📄 ";
-}
+.upload-targets input[type="radio"]:checked + label {background:#281B1E;color: white;}
 
-#directory-listing .file {
+ .upload-page input[type="file"] {display: none;}
+
+.upload-page {margin: 5%;}
+
+.upload-file {
+  border: 2px solidX rgba(0,0,0,0.12);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #af5154, #503239);
+  margin: 7% 0 0;
+  padding: 1.25rem;
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  cursor: pointer;
+  transition: border-color .12s ease, box-shadow .12s ease, transform .08s;
+  user-select: none;
+  min-height: 110px;
+  color: #edddd4;
 }
 
-#directory-listing .file .downloadlink::before {
-  content: "📦 ";
-  
+.drop-content { display:flex; gap: 1rem; align-items:center; z-index:0; }
+.drop-text .muted { font-size: .9rem; color: #af9585; margin-top:4px; }
+
+.upload-file.dragover {
+  border-color: #2563eb;
+  box-shadow: 0 10px 30px rgba(37,99,235,0.08);
+  transform: translateY(-2px);
 }
 
-#directory-listing .file .downloadlink {
-  font-size: large;
+.file-list { margin-top: .75rem; font-size: .95rem; color: #111; }
+.file-item { display:flex; justify-content:space-between; align-items:center; gap: 0.75rem; padding: .45rem .6rem; border-radius: 8px; background: rgba(0,0,0,0.02); margin-bottom: .45rem; }
+.file-item .name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:60%; }
+.file-item .size { color: rgba(0,0,0,0.5); font-size:.85rem; }
+
+.upload-actions { margin-top: .75rem; display:flex; gap:.6rem; }
+.btn {
+  background: #281B1E;
+  color: #fff;
+  border: none;
+  padding: .55rem 0.9rem;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.btn:disabled { background: #9bb7ff; cursor: not-allowed; }
+
+@media (max-width:480px) {
+  .upload-file { padding: .9rem; min-height:90px; }
+  .file-item .name { max-width: 50%; }
 }
 
-#directory-listing a:hover {
-  background-color: #f0f0f0;
+input[type=radio]:disabled + label {
+  opacity:0.5;
 }
