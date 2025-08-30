@@ -22,7 +22,7 @@
 {{ if .Is_admin }}
     {{ continue }}
 {{ end }}
-<a href="{{ if .Domain }}http://{{.Domain}}" target="_blank"{{else}}{{ .Path }}"{{end}} class="service-item">
+<a href="{{ if .Domain }}http://{{.Domain}}{{.Path}}" target="_blank"{{else}}{{ .Path }}"{{end}} class="service-item">
     <article>
         {{ if .Icon }}
             <img src="{{ .Icon }}" alt="{{ .DisplayName }} icon" class="service-icon">
@@ -31,7 +31,7 @@
         {{ end }}
         <h3>{{ .DisplayName }}</h2>
         <p>{{ .Description }}</p>
-
+        
         {{ if .Need_Auth }}
             <span class="service-note">Need authentication</span>
         {{ else }}
