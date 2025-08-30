@@ -5,3 +5,4 @@ homeserver-portal
 vendor/*
 .gitconfig
 *.yaml
+users.yaml
