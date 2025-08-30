@@ -4,7 +4,7 @@
   target: http://placeholder.com
   display_name: "Jellyfin"
   description: "Jellyfin Media Server (Netflix alternative)"
-  icon: ""
+  icon: "/static/icons/jellyfin.png"
   need_auth: true
   is_admin: false
   
@@ -13,7 +13,7 @@
   target: http://localhost:8080
   display_name: "My Website"
   description: "My personal website"
-  icon: ""
+  icon: "static/icons/archi.png"
   need_auth: false
   is_admin: false
   
@@ -22,7 +22,7 @@
   target: http://localhost:3010
   display_name: "Affine"
   description: "Affine Note-taking app"
-  icon: ""
+  icon: "static/icons/affine.png"
   need_auth: false
   is_admin: false
 
@@ -31,17 +31,24 @@
   target: http://localhost:12951
   display_name: "Joplin"
   description: "Joplin Note-taking app (legacy)"
-  icon: ""
+  icon: "static/icons/joplin.png"
   need_auth: false
   is_admin: false
 
 - path: /test
   domain: ""
-  target: http://testingthis.com
+  target: http://localhost:8080
+  display_name: "Placeholder Admin"
+  description: "SIMPLE PLACEHOLDER FOR TESTS"
+  icon: ""
+  need_auth: false
+  is_admin: false
+
+- path: /test2
+  domain: ""
+  target: http://localhost:8080
   display_name: "Placeholder Admin"
   description: "SIMPLE PLACEHOLDER FOR ADMIN TESTS"
   icon: ""
   need_auth: true
   is_admin: true
-
-

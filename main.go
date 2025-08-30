@@ -22,8 +22,8 @@ import (
 )
 
 var (
-	store = sessions.NewCookieStore([]byte("super-secret-key"))
-	whitelist = autocert.HostWhitelist("dev.lawcky.net", "affine.lawcky.net")
+	store = sessions.NewCookieStore([]byte("even-better-super-secret-key"))
+	whitelist = autocert.HostWhitelist("dev.lawcky.net", "affine.lawcky.net", "lawcky.net", "kandia.ru")
 	serviceConf  []ServiceRoute
 	serviceUsers []UserAccount
 )
