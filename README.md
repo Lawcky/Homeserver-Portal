@@ -8,3 +8,5 @@
     - session key
     - max file size (upload for non admins)
     - max dir size (of /files dir to allow or forbid uploads)
+
+- log system
