@@ -267,6 +267,7 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	username := getUserProperty(r, "Username")
+	is_admin := getUserProperty(r, "is_admin")
 
 	files := []struct {
 		Name   string
@@ -292,6 +293,7 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, map[string]interface{}{
 		"Title":    "Files",
 		"Username": username,
+		"Is_admin": is_admin,
 		"Path":     path,
 		"Files":    files,
 		"Return":   filepath.Join("/files", path, "../"), //strip the last part of the path, if the last part is /files than put / instead

@@ -1,6 +1,6 @@
 # services.yaml
 - path: /jellyfin
-  domain: ""
+  domain: 
   target: http://placeholder.com
   display_name: "Jellyfin"
   description: "Jellyfin Media Server (Netflix alternative)"
@@ -9,7 +9,7 @@
   is_admin: false
   
 - path: /site
-  domain: ""
+  domain: 
   target: http://localhost:8080
   display_name: "My Website"
   description: "My personal website"
@@ -27,7 +27,7 @@
   is_admin: false
 
 - path: /joplin
-  domain: ""
+  domain: 
   target: http://localhost:12951
   display_name: "Joplin"
   description: "Joplin Note-taking app (legacy)"
@@ -36,7 +36,7 @@
   is_admin: false
 
 - path: /test
-  domain: ""
+  domain: 
   target: http://localhost:8080
   display_name: "Placeholder Admin"
   description: "SIMPLE PLACEHOLDER FOR TESTS"
@@ -45,7 +45,7 @@
   is_admin: false
 
 - path: /test2
-  domain: ""
+  domain: 
   target: http://localhost:8080
   display_name: "Placeholder Admin"
   description: "SIMPLE PLACEHOLDER FOR ADMIN TESTS"
