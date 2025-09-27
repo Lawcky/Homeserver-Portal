@@ -8,5 +8,5 @@
     - session key
     - max file size (upload for non admins)
     - max dir size (of /files dir to allow or forbid uploads)
-
+    - all the domain variables present
 - log system
