@@ -57,7 +57,7 @@
 {{ range .Services }}
 
 {{ if .Is_admin }}
-<a href="{{ .Path }}" class="service-item">
+<a href="{{ if .Domain }}http://{{.Domain}}{{.Path}}" target="_blank"{{else}}{{ .Path }}"{{end}} class="service-item">
     <article>
         {{ if .Icon }}
             <img src="{{ .Icon }}" alt="{{ .DisplayName }} icon" class="service-icon">

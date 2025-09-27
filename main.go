@@ -23,7 +23,7 @@ import (
 
 var (
 	store = sessions.NewCookieStore([]byte("even-better-super-secret-key"))
-	whitelist = autocert.HostWhitelist("dev.lawcky.net", "affine.lawcky.net", "lawcky.net", "kandia.ru")
+	whitelist = autocert.HostWhitelist("jellyfin.lawcky.net","proxmox.lawcky.net", "affine.lawcky.net", "lawcky.net", "truenas.lawcky.net")
 	serviceConf  []ServiceRoute
 	serviceUsers []UserAccount
 )
@@ -133,6 +133,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		session, _ := store.Get(r, "session")
 		session.Options.HttpOnly = true
 		session.Options.Secure = true
+		session.Options.Domain = ".lawcky.net"
 		session.Values["user"] = username
 		session.Values["authenticated"] = true
 		session.Values["is_admin"] = is_admin
@@ -152,14 +153,15 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	time.Sleep(3 * time.Second) // simulate a delay for failed login attempts
 	// invalid credentials
 	next := r.Form.Get("next")
-	http.Redirect(w, r, "/login?next="+url.QueryEscape(next)+"&message=Invalid-credentials", http.StatusFound)
+	http.Redirect(w, r, "https://lawcky.net/login?next="+url.QueryEscape(next)+"&message=Invalid-credentials", http.StatusFound)
 }
 
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	sess, _ := store.Get(r, "session")
+	sess.Options.Domain = "lawcky.net"
 	sess.Options.MaxAge = -1 //deletes the cookie
 	sess.Save(r, w)
-	http.Redirect(w, r, "/login", http.StatusFound)
+	http.Redirect(w, r, "https://lawcky.net/login", http.StatusFound)
 }
 
 func portalHandler(w http.ResponseWriter, r *http.Request) {
@@ -214,14 +216,14 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 	if need_admin && !(getUserProperty(r, "is_admin") == "true") { // need admin access, the user is connect and is not admin
 
 		if !authStatus {
-			http.Redirect(w, r, "/login?next=files/"+url.QueryEscape(path)+"&action="+action, http.StatusFound)
+			http.Redirect(w, r, "https://lawcky.net/login?next=files/"+url.QueryEscape(path)+"&action="+action, http.StatusFound)
 			return
 		}
 
 		http.Error(w, "You need an admin account to access this page.", http.StatusForbidden)
 		return
 	} else if need_auth && !authStatus { // this just requires user authentication and the user is not logged in
-		http.Redirect(w, r, "/login?next=files/"+url.QueryEscape(path)+"&action="+action, http.StatusFound)
+		http.Redirect(w, r, "https://lawcky.net/login?next=files/"+url.QueryEscape(path)+"&action="+action, http.StatusFound)
 		return
 	}
 
@@ -241,13 +243,13 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 
 		if need_admin && !(getUserProperty(r, "is_admin") == "true") { // need admin access, the user is connect and is not admin
 			if !authStatus {
-				http.Redirect(w, r, "/login?next=files/"+url.QueryEscape(path)+"&action="+action, http.StatusFound)
+				http.Redirect(w, r, "https://lawcky.net/login?next=files/"+url.QueryEscape(path)+"&action="+action, http.StatusFound)
 				return
 			}
 			http.Error(w, "You need an admin account to access this page.", http.StatusForbidden)
 			return
 		} else if need_auth && !authStatus { // this just requires user authentication and the user is not logged in
-			http.Redirect(w, r, "/login?next=files/"+url.QueryEscape(path)+"&action="+action, http.StatusFound)
+			http.Redirect(w, r, "https://lawcky.net/login?next=files/"+url.QueryEscape(path)+"&action="+action, http.StatusFound)
 			return
 		} else {
 			// if the GET parameter "action" is set to download then make the file downloaded, else just serve it 
@@ -303,7 +305,7 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	if (!isAuthenticated(r)) {
-		http.Redirect(w, r, "/login?next=/upload", http.StatusFound)
+		http.Redirect(w, r, "https://lawcky.net/login?next=/upload", http.StatusFound)
 		return
 	}
 
@@ -407,13 +409,30 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+
 func authMiddleware(next http.Handler, user_admin bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if auth := isAuthenticated(r); !auth {
-			dest := url.QueryEscape(r.URL.RequestURI())
-			http.Redirect(w, r, "/login?next="+dest, http.StatusFound)
+		if auth := isAuthenticated(r); !auth {	
+			parsedURL, err := url.Parse(r.URL.RequestURI())
+			if err != nil {
+				http.Error(w, "Invalid URL", http.StatusBadRequest)
+				return
+			}
+			host := r.Host
+
+			hostnameParts := strings.Split(host, ".")
+
+			var dest string
+			if len(hostnameParts) > 2 {
+				dest = "https://" + host + parsedURL.Path
+			} else {
+				dest = parsedURL.Path
+			}
+
+			http.Redirect(w, r, "https://lawcky.net/login?next="+url.QueryEscape(dest), http.StatusFound)
 			return
 		}
+
 		if user_admin {
 			is_admin := getUserProperty(r, "is_admin")
 			if is_admin != "true" {
@@ -421,6 +440,7 @@ func authMiddleware(next http.Handler, user_admin bool) http.Handler {
 				return
 			}
 		}
+
 		next.ServeHTTP(w, r)
 	})
 }
@@ -498,7 +518,7 @@ func main() {
 		if route.Domain != "" {
 			hostRoute := r.Host(route.Domain)
 
-			if route.Path != "" && route.Path != "/" {
+			if route.Path != "" {
 				hostRoute = hostRoute.PathPrefix(route.Path)
 				proxy = http.StripPrefix(route.Path, proxy)
 			}

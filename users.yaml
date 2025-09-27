@@ -1,10 +1,13 @@
-# services.yaml
-- username: admin
-  bcrypthashedpassword: $2a$12$zl814bt85KTGqmb0s/f9Lu4wlrjwcLv/eppixTxIx./4HEdM.t/LW
-  is_admin: True
-- username: user
-  bcrypthashedpassword: $2a$12$zl814bt85KTGqmb0s/f9Lu4wlrjwcLv/eppixTxIx./4HEdM.t/LW
-  is_admin: False
+# # services.yaml
+# - username: admin
+#   bcrypthashedpassword: $2a$12$zl814bt85KTGqmb0s/f9Lu4wlrjwcLv/eppixTxIx./4HEdM.t/LW
+#   is_admin: True
+# - username: user
+#   bcrypthashedpassword: $2a$12$zl814bt85KTGqmb0s/f9Lu4wlrjwcLv/eppixTxIx./4HEdM.t/LW
+#   is_admin: False
 - username: lawcky
-  bcrypthashedpassword: $2a$12$zl814bt85KTGqmb0s/f9Lu4wlrjwcLv/eppixTxIx./4HEdM.t/LW
+  bcrypthashedpassword: $2a$12$kZfbEvazxp5Yn5XIHjm/ueabsSPxIHMQevT6hAQYKRhQmOR.3ROCq
   is_admin: True  
+- username: guest
+  bcrypthashedpassword: $2a$12$ksW6IHVbUpRmGi24R9mE1ezAQu3OtuRu4X5uUQSr7FxK7YqnttY9S
+  is_admin: false  

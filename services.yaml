@@ -1,54 +1,35 @@
-# services.yaml
-- path: /jellyfin
-  domain: 
-  target: http://placeholder.com
+- path: /
+  domain: jellyfin.lawcky.net
+  target: http://localhost:8096
   display_name: "Jellyfin"
-  description: "Jellyfin Media Server (Netflix alternative)"
+  description: "Jellyfin Media Server (Netflix alternative), not always up."
   icon: "/static/icons/jellyfin.png"
   need_auth: true
   is_admin: false
-  
-- path: /site
-  domain: 
-  target: http://localhost:8080
-  display_name: "My Website"
-  description: "My personal website"
-  icon: "static/icons/archi.png"
-  need_auth: false
-  is_admin: false
-  
+ 
 - path: /
   domain: affine.lawcky.net
   target: http://localhost:3010
-  display_name: "Affine"
+  display_name: "Affine (not yet)"
   description: "Affine Note-taking app"
   icon: "static/icons/affine.png"
   need_auth: false
   is_admin: false
 
-- path: /joplin
-  domain: 
-  target: http://localhost:12951
-  display_name: "Joplin"
-  description: "Joplin Note-taking app (legacy)"
-  icon: "static/icons/joplin.png"
-  need_auth: false
-  is_admin: false
-
-- path: /test
-  domain: 
-  target: http://localhost:8080
-  display_name: "Placeholder Admin"
-  description: "SIMPLE PLACEHOLDER FOR TESTS"
-  icon: ""
-  need_auth: false
-  is_admin: false
-
-- path: /test2
-  domain: 
-  target: http://localhost:8080
-  display_name: "Placeholder Admin"
-  description: "SIMPLE PLACEHOLDER FOR ADMIN TESTS"
-  icon: ""
+- path: /
+  domain: truenas.lawcky.net
+  target: http://10.0.0.201
+  display_name: "TrueNas"
+  description: "TrueNas Portal"
+  icon: "static/icons/affine.png"
   need_auth: true
   is_admin: true
+
+- path: /site
+  domain: 
+  target: http://localhost:8080
+  display_name: "My Legacy Website"
+  description: "My personal hold website for CTFs (DB is not up)"
+  icon: "static/icons/archi.png"
+  need_auth: false
+  is_admin: false
